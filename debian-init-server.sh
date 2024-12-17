@@ -1,21 +1,39 @@
 #!/bin/bash
-# setup_server.sh - A script to set up a server with Nginx, PHP 8.3, and Composer.
+# setup_server.sh - A script to set up a server with Nginx, PHP, and Composer.
 
 # Purpose:
 # This script automates the following tasks:
 # 1. Creates a working directory structure.
 # 2. Updates and upgrades the system packages.
-# 3. Installs Nginx, PHP 8.3, and required PHP extensions.
-# 4. Adds the Sury repository for PHP 8.3.
+# 3. Installs Nginx, PHP (version specified by the user or defaults to 8.3), and required PHP extensions.
+# 4. Adds the Sury repository for PHP.
 # 5. Installs Composer (PHP dependency manager).
 # 6. Displays installed versions of Composer and PHP.
 
 # Usage:
-# Run this script with sudo privileges:
-#   sudo bash setup_server.sh
+# Run this script with sudo privileges and optional PHP version:
+#   sudo bash setup_server.sh --php=8.3
+#   sudo bash setup_server.sh            # Defaults to PHP 8.3 if no argument is provided
 
 # Exit script if any command fails
 set -e
+
+# === Default Variables ===
+PHP_VERSION="8.3" # Default PHP version
+
+# === Parse Arguments ===
+for arg in "$@"; do
+    case $arg in
+        --php=*)
+        PHP_VERSION="${arg#*=}"
+        shift
+        ;;
+        *)
+        echo "Usage: $0 [--php=<version>]"
+        exit 1
+        ;;
+    esac
+done
 
 # === Functions ===
 # Function to print a message with formatting
@@ -40,15 +58,11 @@ sudo apt update
 sudo apt list --upgradable
 sudo apt upgrade -y
 
-# 3. Install Nginx, PHP 8.3, and required extensions
-print_message "Installing Nginx, PHP 8.3, and PHP extensions..."
-sudo apt install -y nginx php8.3-fpm php8.3-dom php8.3-pgsql php8.3-zip
-
-# 4. Install necessary dependencies for adding repositories
+# 3. Install necessary dependencies for adding repositories
 print_message "Installing dependencies for repositories..."
 sudo apt install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg2
 
-# 5. Add Sury repository for PHP 8.3
+# 4. Add Sury repository for PHP
 print_message "Adding Sury PHP repository..."
 sudo sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
 wget -qO - https://packages.sury.org/php/apt.gpg | sudo apt-key add -
@@ -57,11 +71,11 @@ wget -qO - https://packages.sury.org/php/apt.gpg | sudo apt-key add -
 print_message "Updating package lists after adding Sury repository..."
 sudo apt update
 
-# 6. Reinstall PHP 8.3 (from Sury repository)
-print_message "Reinstalling PHP 8.3 and its extensions..."
-sudo apt install -y nginx php8.3-fpm php8.3-dom php8.3-pgsql php8.3-zip
+# 5. Install Nginx, PHP, and required PHP extensions
+print_message "Installing Nginx, PHP ${PHP_VERSION}, and PHP extensions..."
+sudo apt install -y nginx php${PHP_VERSION}-fpm php${PHP_VERSION}-dom php${PHP_VERSION}-pgsql php${PHP_VERSION}-zip
 
-# 7. Install Composer
+# 6. Install Composer
 print_message "Installing Composer (PHP dependency manager)..."
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
 
@@ -84,10 +98,10 @@ php -r "unlink('composer-setup.php');"
 # Move Composer to a global location
 sudo mv composer.phar /usr/bin/composer
 
-# 8. Verify installations
+# 7. Verify installations
 print_message "Verifying Composer and PHP installations..."
 composer -v
 php -v
 
 # Final message
-print_message "Server setup is complete! Nginx, PHP 8.3, and Composer are ready."
+print_message "Server setup is complete! Nginx, PHP ${PHP_VERSION}, and Composer are ready."
